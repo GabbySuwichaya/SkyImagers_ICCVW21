@@ -92,10 +92,8 @@ if __name__ == "__main__":
     dataset = DatasetFromFolder(INPUTS_PATH, TARGET_PATH)
     dataloader = DataLoader(dataset)
     for data_ in dataloader:
-        inputs, target = data_
-        pdb.set_trace()
-        plotXY(inputs,target)
-        pdb.set_trace()
+        inputs, target = data_ 
+        plotXY(inputs,target) s
 
 
 
