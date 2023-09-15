@@ -17,36 +17,28 @@ import cupy
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--input_channels',
-                    default=12,
-                    type=np.int,
+                    default=12, 
                     help='(default value: %(default)s) Number of channels for input images. 3*NumOfImages')
 parser.add_argument('--output_channels',
-                    default=3,
-                    type=np.int,
+                    default=3, 
                     help='(default value: %(default)s) Number of channels for output images.')
 parser.add_argument('--lam_int',
-                    default=5.0,
-                    type=np.float32,
+                    default=5.0, 
                     help='(default value: %(default)s) Hyperparameter for intensity loss.')
 parser.add_argument('--lam_gd',
-                    default=0.00111,
-                    type=np.float32,
+                    default=0.00111, 
                     help='(default value: %(default)s) Hyperparameter for gradient loss.')
 parser.add_argument('--lam_op',
-                    default=0.010,
-                    type=np.float32,
+                    default=0.010, 
                     help='(default value: %(default)s) Hyperparameter for optical flow loss.')
 parser.add_argument('--EPOCHS',
-                    default=40,
-                    type=np.int,
+                    default=40, 
                     help='(default value: %(default)s) Number of epochs o train model for.')
 parser.add_argument('--BATCH_SIZE',
-                    default=8,
-                    type=np.int,
+                    default=8, 
                     help='(default value: %(default)s) Training batch size.')
 parser.add_argument('--LR',
-                    default=0.0002,
-                    type=np.float32,
+                    default=0.0002, 
                     help='(default value: %(default)s) learning rate.')
 
 args = parser.parse_args()

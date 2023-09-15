@@ -24,7 +24,7 @@ import PIL.Image
 import sys
 
 try:
-    from .correlation import correlation 
+    from .correlation  import FunctionCorrelation
 except:
     sys.path.insert(0, './correlation'); import correlation 
 
@@ -171,10 +171,10 @@ class Network(torch.nn.Module):
                 # end
 
                 if self.moduleUpcorr is None:
-                    tensorCorrelation = torch.nn.functional.leaky_relu(input=correlation.FunctionCorrelation(tensorFirst=tensorFeaturesFirst, tensorSecond=tensorFeaturesSecond, intStride=1), negative_slope=0.1, inplace=False)
+                    tensorCorrelation = torch.nn.functional.leaky_relu(input= FunctionCorrelation(tensorFirst=tensorFeaturesFirst, tensorSecond=tensorFeaturesSecond, intStride=1), negative_slope=0.1, inplace=False)
 
                 elif self.moduleUpcorr is not None:
-                    tensorCorrelation = self.moduleUpcorr(torch.nn.functional.leaky_relu(input=correlation.FunctionCorrelation(tensorFirst=tensorFeaturesFirst, tensorSecond=tensorFeaturesSecond, intStride=2), negative_slope=0.1, inplace=False))
+                    tensorCorrelation = self.moduleUpcorr(torch.nn.functional.leaky_relu(input=FunctionCorrelation(tensorFirst=tensorFeaturesFirst, tensorSecond=tensorFeaturesSecond, intStride=2), negative_slope=0.1, inplace=False))
 
                 # end
 
