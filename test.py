@@ -89,33 +89,38 @@ int_loss = Intensity_Loss(1).to(device)
 trainLossCount = 0
 num_images = 0
 pbar = tqdm(testLoader)
+ 
 
-pdb.set_trace()
-
-for i, data in enumerate(pbar):
+for i, inputs, target in enumerate(pbar):
     # Training
-    inputs = Variable(data[0]).to(device) # The input data
-    target = Variable(data[1]).float().to(device)
+    inputs = inputs.float().to(device) # The input data
+    target = target.float().to(device)
     
     num_images += inputs.size(0)
     
-    # Trains model 
-    with torch.no_grad(): 
-        G_output = model(inputs)
+    long_inputs = torch.cat([inputs,target],dim=1)
+    
+    for i in range(5):
+
+        x = long_inputs[:,3*i:(3*i+12),:,:] 
+        y = target[:,3*i:(3*i+3),:,:]  
+        # Trains model 
+        with torch.no_grad(): 
+            G_output = model(x)
   
-    # For Optical Flow 
-    input_last = inputs[:, 9:,:,:].clone().cuda() #I_t
+        # For Optical Flow 
+        input_last = x[:, 9:,:,:].clone().cuda() #I_t
  
-    pred_flow_esti_tensor = torch.cat([input_last, G_output],1) #(Predicted)
-    gt_flow_esti_tensor = torch.cat([input_last, target],1) #(Ground Truth)
+        pred_flow_esti_tensor = torch.cat([input_last, G_output],1) #(Predicted)
+        gt_flow_esti_tensor = torch.cat([input_last, y],1) #(Ground Truth)
     
 
-    flow_gt    = batch_estimate(gt_flow_esti_tensor, flow_network)
-    flow_pred  = batch_estimate(pred_flow_esti_tensor, flow_network)
+        flow_gt    = batch_estimate(gt_flow_esti_tensor, flow_network)
+        flow_pred  = batch_estimate(pred_flow_esti_tensor, flow_network)
  
-    g_op_loss  = op_loss(flow_pred, flow_gt)
-    g_int_loss = int_loss(G_output, target)
-    g_gd_loss  = gd_loss(G_output, target)
+        g_op_loss  = op_loss(flow_pred, flow_gt)
+        g_int_loss = int_loss(G_output, target)
+        g_gd_loss  = gd_loss(G_output, target)
  
     pbar.set_postfix({'Optial flow loss': g_op_loss.item(), 'Intensity loss': g_int_loss.item(), 'Gradient loss': g_gd_loss.item()})
 
