@@ -77,7 +77,7 @@ trainLoader = DataLoader(DatasetFromFolder(INPUTS_PATH, TARGET_PATH), args.BATCH
 
 # Trains model (on training data) and returns the training loss
 def run_train(model, x, y, gd_loss, op_loss, int_loss, optimizer): # Add skip as a parameter here
-    target = y
+    target = y 
     model = model.train()
 
     G_output = model(x)
@@ -85,19 +85,18 @@ def run_train(model, x, y, gd_loss, op_loss, int_loss, optimizer): # Add skip as
     # For Optical Flow
     inputs = x
     input_last = inputs[:, 9:,:,:].clone().cuda() #I_t
-
-    
+ 
     pred_flow_esti_tensor = torch.cat([input_last, G_output],1) #(Predicted)
     gt_flow_esti_tensor = torch.cat([input_last, target],1) #(Ground Truth)
     
 
     flow_gt = batch_estimate(gt_flow_esti_tensor, flow_network)
     flow_pred = batch_estimate(pred_flow_esti_tensor, flow_network)
-
-    
+ 
     g_op_loss = op_loss(flow_pred, flow_gt)
     g_int_loss = int_loss(G_output, target)
     g_gd_loss = gd_loss(G_output, target)
+ 
 
     g_loss = args.lam_gd*g_gd_loss + args.lam_op*g_op_loss + args.lam_int*g_int_loss
 
@@ -133,7 +132,8 @@ for epoch in tqdm(range(args.EPOCHS), position = 0, leave = True):
     
     trainLossCount = 0
     num_images = 0
-    for i, data in enumerate(trainLoader):
+    pbar = tqdm(trainLoader)
+    for i, data in enumerate(pbar):
         # Training
         inputs = Variable(data[0]).to(device) # The input data
         target = Variable(data[1]).float().to(device)
@@ -143,7 +143,7 @@ for epoch in tqdm(range(args.EPOCHS), position = 0, leave = True):
         # Trains model
         trainingLoss = run_train(generator, inputs, target, gd_loss, op_loss, int_loss, optimizer) # Add skip as a parameter here
         trainLossCount = trainLossCount + trainingLoss
-        
+        pbar.set_postfix({'Training loss': trainingLoss})
     
     epoch_loss = trainLossCount/num_images
     train_loss.append(epoch_loss)
@@ -151,9 +151,9 @@ for epoch in tqdm(range(args.EPOCHS), position = 0, leave = True):
     print('Training Loss...')
     print("===> Epoch[{}]({}/{}): Loss: {:.8f}".format(epoch + 1, i + 1, len(trainLoader), epoch_loss))
 
-    if epoch % 10 == 0:
-        PATH =  './Iteration' + str(epoch) + '.pt'
-        torch.save(generator, PATH)
+    if epoch % 1  == 0: 
+        PATH =  'weights/Iteration' + str(epoch) + '.pt'
+        torch.save(generator, PATH) 
         print('Saved model iteration' +  str(epoch) + 'to -> ' + PATH)
 
 

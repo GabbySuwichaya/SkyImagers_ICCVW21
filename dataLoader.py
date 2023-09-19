@@ -49,11 +49,12 @@ class DatasetFromFolder(data.Dataset):
         inputs = np.float32(inputs)
         target = np.float32(target)
 
-        pdb.set_trace()
+        # pdb.set_trace() << Comment อันนี้ ออกด้วยนะคะ 
         return inputs, target
 
     def __len__(self):
         return self.n_images
+    
 
 def plot_patch(ax, X, text): 
     ax.imshow(X)
@@ -62,19 +63,57 @@ def plot_patch(ax, X, text):
     ax.axis('off')
 
 
-def plotXY(input_X,input_Y):
+def plotXY_15x18(input_X,input_Y):
     X_ = input_X.permute(2,3,1,0)
     Y_ = input_Y.permute(2,3,1,0)
-
-    Y  = Y_[:,:,:,0] 
+ 
+    Y1  = Y_[:,:,:3,0] 
+    Y2  = Y_[:,:,3:6,0] 
+    Y3  = Y_[:,:,6:9,0] 
+    Y4  = Y_[:,:,9:12,0] 
+    Y5  = Y_[:,:,12:15,0] 
 
     X1 = X_[:,:,:3,0] 
     X2 = X_[:,:,3:6,0] 
     X3 = X_[:,:,6:9,0]  
-    X4 = X_[:,:,9:,0]
+    X4 = X_[:,:,9:12,0]
+    X5 = X_[:,:,12:15,0]
+    X6 = X_[:,:,15:18,0]
 
-    fig, axs = plt.subplots(1,5,figsize=(15, 3)) 
+ 
+    fig, axs = plt.subplots(2,6,figsize=(15, 6)) 
     
+    plot_patch(axs[0,0], Y1, "Y1")   
+    plot_patch(axs[0,1], Y2, "Y2")  
+    plot_patch(axs[0,2], Y3, "Y3")  
+    plot_patch(axs[0,3], Y4, "Y4")  
+    plot_patch(axs[0,4], Y5, "Y5")  
+
+
+    plot_patch(axs[1,0], X1, "X1")  
+    plot_patch(axs[1,1], X2, "X2")
+    plot_patch(axs[1,2], X3, "X3")
+    plot_patch(axs[1,3], X4, "X4")
+    plot_patch(axs[1,4], X5, "X5")
+    plot_patch(axs[1,5], X6, "X6")
+
+    plt.show()    
+
+
+def plotXY(input_X,input_Y, round_i):
+    X_ = input_X.permute(2,3,1,0)
+    Y_ = input_Y.permute(2,3,1,0)
+ 
+    Y  = Y_[:,:,:3,0] 
+
+    X1 = X_[:,:,:3,0] 
+    X2 = X_[:,:,3:6,0] 
+    X3 = X_[:,:,6:9,0]  
+    X4 = X_[:,:,9:12,0]
+
+ 
+    fig, axs = plt.subplots(1,5,figsize=(15, 3)) 
+    plt.title("Round %d" % round_i)
     plot_patch(axs[0], Y, "Y")   
 
     plot_patch(axs[1], X1, "X1")  
@@ -87,14 +126,20 @@ def plotXY(input_X,input_Y):
 
 if __name__ == "__main__":
 
-    INPUTS_PATH = "./SkyNet_Data/xTrain_skip.h5"
-    TARGET_PATH = "./SkyNet_Data/yTrain_skip.h5"
+    INPUTS_PATH = "./SkyNet_Data/xTest_skip_pred5.h5"
+    TARGET_PATH = "./SkyNet_Data/yTest_skip_pred5.h5"
     dataset = DatasetFromFolder(INPUTS_PATH, TARGET_PATH)
     dataloader = DataLoader(dataset)
     for data_ in dataloader:
-        inputs, target = data_ 
-        plotXY(inputs,target) s
+        inputs, target = data_  
+        long_inputs = torch.cat([inputs,target],dim=1)
 
+        for i in range(5):
+
+            x = long_inputs[:,3*i:(3*i+12),:,:] 
+            y = target[:,3*i:(3*i+3),:,:]  
+            plotXY(x,y, i) 
+            
 
 
 
