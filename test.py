@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--input_channels',
                     default=12, 
-                    help='(default value: %(default)s) Number of channels for input images. input_channels = 3*NumOfImages')
+                    help='(default value: %(default)s)https://github.com/GabbySuwichaya/SkyImagers_ICCVW21/tree/main/weights Number of channels for input images. input_channels = 3*NumOfImages')
 parser.add_argument('--output_channels',
                     default=3, 
                     help='(default value: %(default)s) Number of channels for output images.')
@@ -69,7 +69,7 @@ model = SkyNet_UNet(args.input_channels, args.output_channels)
 # model_name = 'weights/Iteration0.pt'
 # model = torch.load(model_name)
 
-model_name = 'weights/weight_%3d.pt' % 39
+model_name = 'weights/weight_%d.pt' % 39
 model.load_state_dict(torch.load(model_name)['state_dict'])
 model = model.cuda().eval()
 
