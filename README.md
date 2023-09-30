@@ -6,7 +6,7 @@ We have trained the weight from the official respository.
 
 1. Install the dependencies with `pip install -r requirements.txt`
 
-2. To train the model, download the dataset and put them into `SkyNet_Data`
+2. Download the dataset from [here](https://drive.google.com/drive/folders/1BkWx0j6Kt5G8CEMzzREprMeoYfw0v4ge?usp=drive_link) and put them into `SkyNet_Data` folder.
 
 3. To run the inference on the pretrained model. The pretrained weight is in `./weights`
 
