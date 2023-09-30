@@ -1,3 +1,30 @@
+# Weights from Precise Forecasting of Sky Images Using Spatial Warping
+
+We have trained the weight from the official respository.  
+
+## Quick start:
+
+1. Install the dependencies with `pip install -r requirements.txt`
+
+2. To train the model, download the dataset and put them into `SkyNet_Data`
+
+3. To run the inference on the pretrained model
+
+```
+(SkyImage) user@user:diretory/Precise-Forecasting-of-Sky-Images-Using-Spatial-Warping$ python3 test.py
+```
+
+4. To run training for the new model
+
+```
+(SkyImage) user@user:diretory/Precise-Forecasting-of-Sky-Images-Using-Spatial-Warping$ python3 train.py
+```
+
+Our prediction result:
+
+![Prediction](./saveplots/prediction_4.png)
+
+
 # Precise Forecasting of Sky Images Using Spatial Warping
 
 <h4 align="center"><b><a href="https://leronjulian.github.io/" target="_blank">Leron
