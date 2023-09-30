@@ -11,7 +11,7 @@ from dataLoader import DatasetFromFolder, plotXY
 from torch.utils.data import DataLoader
 import argparse
 import numpy as np
-
+import os
 import cupy
 
 parser = argparse.ArgumentParser()
@@ -41,6 +41,8 @@ parser.add_argument('--LR',
                     default=0.0002, 
                     help='(default value: %(default)s) learning rate.')
 
+parser.add_argument("--previous_epoch", default=0, help='Number of the epoch of the previously trained model')
+
 args = parser.parse_args()
 
 
@@ -65,11 +67,16 @@ device = torch.device(dev if torch.cuda.is_available() else "cpu")
 generator = SkyNet_UNet(args.input_channels, args.output_channels)
 
 
-generator_name = 'weights/weight_%3d.pt' % 38
-generator.load_state_dict(torch.load(generator_name)['state_dict'])
-generator = generator.to(device).train()
+generator_name = 'weights/weight_%d.pt' % args.previous_epoch
 
-epoch_start = torch.load(generator_name)['epoch'] 
+
+if os.path.isfile(generator_name):
+    generator.load_state_dict(torch.load(generator_name)['state_dict'])
+    generator = generator.to(device).train() 
+    epoch_start = torch.load(generator_name)['epoch'] 
+else:
+    epoch_start = 0
+    generator = generator.to(device).train() 
 
 generator = torch.nn.DataParallel(generator, device_ids=[devCount - 1, 0]) 
 
