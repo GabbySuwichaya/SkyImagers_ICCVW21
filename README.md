@@ -8,7 +8,7 @@ We have trained the weight from the official respository.
 
 2. To train the model, download the dataset and put them into `SkyNet_Data`
 
-3. To run the inference on the pretrained model
+3. To run the inference on the pretrained model. The pretrained weight is in `./weights`
 
 ```
 (SkyImage) user@user:diretory/Precise-Forecasting-of-Sky-Images-Using-Spatial-Warping$ python3 test.py
