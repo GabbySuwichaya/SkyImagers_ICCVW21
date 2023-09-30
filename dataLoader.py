@@ -58,7 +58,7 @@ class DatasetFromFolder(data.Dataset):
 
 def plot_patch(ax, X, text): 
     ax.imshow(X)
-    ax.text(1, -0.5, text, size=15, ha="center")
+    ax.set_title(text)
     ax.axis('equal')
     ax.axis('off')
 
@@ -100,28 +100,55 @@ def plotXY_15x18(input_X,input_Y):
     plt.show()    
 
 
-def plotXY(input_X,input_Y, round_i):
-    X_ = input_X.permute(2,3,1,0)
-    Y_ = input_Y.permute(2,3,1,0)
+def plotXY(input_X,input_Y, Y_predict=None, savepath=None, text_description=None):
+    
  
-    Y  = Y_[:,:,:3,0] 
+    Y  = input_Y[:,:,:3] 
 
-    X1 = X_[:,:,:3,0] 
-    X2 = X_[:,:,3:6,0] 
-    X3 = X_[:,:,6:9,0]  
-    X4 = X_[:,:,9:12,0]
+    X1 = input_X[:,:,:3] 
+    X2 = input_X[:,:,3:6] 
+    X3 = input_X[:,:,6:9]  
+    X4 = input_X[:,:,9:12]
 
- 
-    fig, axs = plt.subplots(1,5,figsize=(15, 3)) 
-    plt.title("Round %d" % round_i)
-    plot_patch(axs[0], Y, "Y")   
+    # [ 'Sampled data:', 
+    #                               "Empirical Mean: %.2f"  % np.mean(data_sample), 
+    #                               "Empirical std: %.2f" % np.std(data_sample)]
 
-    plot_patch(axs[1], X1, "X1")  
-    plot_patch(axs[2], X2, "X2")
-    plot_patch(axs[3], X3, "X3")
-    plot_patch(axs[4], X4, "X4")
+    if text_description is not None:    
+        txt_list = []
+        for key, value in text_description.items():
+            if key == "id":
+                txt_list.append( "%s: %d" % (key, value))
+            else:
+                txt_list.append( "%s: %.2f" % (key, value))
+    
+        textstr_sampled = '\n'.join(txt_list)   
 
-    plt.show()    
+    if Y_predict is None:
+        fig, axs = plt.subplots(1,5,figsize=(15, 3))  
+
+        plot_patch(axs[0], X1, "X1")  
+        if text_description is not None:
+            axs[0].text(-0, 1.5,   textstr_sampled,   horizontalalignment='left',    verticalalignment='top',  family='monospace', color="blue") 
+        plot_patch(axs[1], X2, "X2")
+        plot_patch(axs[2], X3, "X3")
+        plot_patch(axs[3], X4, "X4")
+        plot_patch(axs[4], Y, "Y")   
+    else: 
+        fig, axs = plt.subplots(1,6,figsize=(15, 3))  
+        plot_patch(axs[0], X1, "X1")  
+        if text_description is not None:
+            axs[0].text(-0, 280,   textstr_sampled,  horizontalalignment='left',    verticalalignment='top',  family='monospace', color="blue") 
+        plot_patch(axs[1], X2, "X2")
+        plot_patch(axs[2], X3, "X3")
+        plot_patch(axs[3], X4, "X4")
+        plot_patch(axs[4], Y,  "Y GT")    
+        plot_patch(axs[5], Y_predict, "Y Predict")             
+
+    if savepath is None:
+        plt.show()
+    else:
+        plt.savefig(savepath)    
 
 
 if __name__ == "__main__":
@@ -134,11 +161,10 @@ if __name__ == "__main__":
         inputs, target = data_  
         long_inputs = torch.cat([inputs,target],dim=1)
 
-        for i in range(5):
-
+        for i in range(5): 
             x = long_inputs[:,3*i:(3*i+12),:,:] 
             y = target[:,3*i:(3*i+3),:,:]  
-            plotXY(x,y, i) 
+            plotXY(x.permute(2,3,1,0).squeeze(-1), y.permute(2,3,1,0).squeeze(-1))  
             
 
 

@@ -4,10 +4,10 @@ import torch.optim as optim
 import numpy as np
 from tqdm import tqdm
 from torch.autograd import Variable
-from LiteFlowNet import *
-from losses import *
-from skynet_Unet_model import *
-from dataLoader import *
+from LiteFlowNet import Network, batch_estimate
+from losses import Gradient_Loss, Flow_Loss, Intensity_Loss
+from skynet_Unet_model import SkyNet_UNet
+from dataLoader import DatasetFromFolder, plotXY
 from torch.utils.data import DataLoader
 import argparse
 import numpy as np
@@ -64,8 +64,14 @@ device = torch.device(dev if torch.cuda.is_available() else "cpu")
 # SkyNet UNet
 generator = SkyNet_UNet(args.input_channels, args.output_channels)
 
+
+generator_name = 'weights/weight_%3d.pt' % 38
+generator.load_state_dict(torch.load(generator_name)['state_dict'])
+generator = generator.to(device).train()
+
+epoch_start = torch.load(generator_name)['epoch'] 
+
 generator = torch.nn.DataParallel(generator, device_ids=[devCount - 1, 0]) 
-generator = generator.to(device)
 
 # Optical Flow Network
 flow_network = Network()
@@ -127,7 +133,7 @@ int_loss = Intensity_Loss(1).to(device)
 
 # Training Part ...
 num_images = 0
-for epoch in tqdm(range(args.EPOCHS), position = 0, leave = True):
+for epoch in tqdm(range(epoch_start, args.EPOCHS), position = 0, leave = True):
     print('Starting Epoch...', epoch + 1)
     
     trainLossCount = 0
@@ -151,14 +157,21 @@ for epoch in tqdm(range(args.EPOCHS), position = 0, leave = True):
     print('Training Loss...')
     print("===> Epoch[{}]({}/{}): Loss: {:.8f}".format(epoch + 1, i + 1, len(trainLoader), epoch_loss))
 
+    state = {
+        'epoch': epoch,
+        'state_dict': generator.module.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'train_loss':epoch_loss 
+        }
+
     if epoch % 1  == 0: 
-        PATH =  'weights/Iteration' + str(epoch) + '.pt'
-        torch.save(generator, PATH) 
+        PATH =  'weights/weight_%3d.pt' % epoch   
+        torch.save(state, PATH) 
         print('Saved model iteration' +  str(epoch) + 'to -> ' + PATH)
 
 
 print('Training Complete...')
 
 PATH =  './finalModel.pt'
-torch.save(generator, PATH)
+torch.save(generator.state_dict(), PATH)
 print('Saved Finnal Model to -> ' + PATH)
