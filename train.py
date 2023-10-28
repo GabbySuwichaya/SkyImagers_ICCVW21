@@ -35,7 +35,7 @@ parser.add_argument('--EPOCHS',
                     default=40, 
                     help='(default value: %(default)s) Number of epochs o train model for.')
 parser.add_argument('--BATCH_SIZE',
-                    default=8, 
+                    default=1, 
                     help='(default value: %(default)s) Training batch size.')
 parser.add_argument('--LR',
                     default=0.0002, 

@@ -6,48 +6,55 @@ import numpy as np
 import torch
 from warp import *
 import pdb
-
+import glob
+from math import log10, sqrt 
 import matplotlib.pyplot as plt
 ## Hyperparameter
 WarpUpSampFactor = 0.707
-#############
+
+def PSNR(original, compressed): 
+    mse = np.mean((original - compressed) ** 2) 
+    if(mse == 0):  # MSE is zero means no noise is present in the signal . 
+                  # Therefore PSNR have no importance. 
+        return 100
+    max_pixel = 255
+    psnr = 20 * log10(max_pixel / sqrt(mse)) 
+    return psnr 
+
 
 class DatasetFromFolder(data.Dataset):
-    def __init__(self, input_files, target_files):
+    def __init__(self, input_folder):
         super(DatasetFromFolder, self).__init__()
 
-        self.inputFile  = h5py.File(input_files, 'r')
-        self.targetFile = h5py.File(target_files, 'r') 
+        self.input_files = glob.glob(input_folder)
+ 
         
-        self.n_images = len(self.inputFile)
+        self.n_images = len(self.input_files)
 
     def __getitem__(self, index):
-        XfileName = 'X' + str(index)
-        YfileName = 'y' + str(index)
-        
-        inputs = self.inputFile[XfileName]  
-        inputs = inputs[:]
-        inputs = np.float32(inputs)
-        inputs = inputs/255
-        #Warp Here
-        inputs = warp(inputs, WarpUpSampFactor)
-        inputs = np.moveaxis(inputs, 2, 0)
+
+        h5file = h5py.File(self.input_files[index], 'r') 
+  
+        inputs = h5file["X"] 
+        target = h5file["Y"]  
+
+        inputs  = np.array(inputs)
+        target  = np.array(target)
+ 
+        inputs = inputs.astype('float')/256  
+        #Warp Hereinput_folder
+        #inputs = warp(inputs, WarpUpSampFactor)
+        #inputs = np.moveaxis(inputs, 2, 0)
         inputs = torch.from_numpy(inputs)
         
-        
-        target = self.targetFile[YfileName]
-        target = target[:]
-        target = np.float32(target)
-        target = target/255
+         
+        target = target.astype('float')/256   
         #Warp Here
-        target = warp(target, WarpUpSampFactor)
+        #target = warp(target, WarpUpSampFactor)
         
-        target = np.moveaxis(target, 2, 0)
+        #target = np.moveaxis(target, 2, 0)
         target = torch.from_numpy(target)
-        
-        
-        inputs = np.float32(inputs)
-        target = np.float32(target)
+         
 
         # pdb.set_trace() << Comment อันนี้ ออกด้วยนะคะ 
         return inputs, target
@@ -59,7 +66,7 @@ class DatasetFromFolder(data.Dataset):
 def plot_patch(ax, X, text): 
     ax.imshow(X)
     ax.set_title(text)
-    ax.axis('equal')
+    ax.axis('equal') 
     ax.axis('off')
 
 
@@ -125,49 +132,48 @@ def plotXY(input_X,input_Y, Y_predict=None, savepath=None, text_description=None
         textstr_sampled = '\n'.join(txt_list)   
 
     if Y_predict is None:
-        fig, axs = plt.subplots(1,5,figsize=(15, 3))  
+        fig, axs = plt.subplots(1,6,figsize=(15, 3))  
 
-        plot_patch(axs[0], X1, "X1")  
-        if text_description is not None:
-            axs[0].text(-0, 1.5,   textstr_sampled,   horizontalalignment='left',    verticalalignment='top',  family='monospace', color="blue") 
+        plot_patch(axs[0], X1, "X1")   
         plot_patch(axs[1], X2, "X2")
         plot_patch(axs[2], X3, "X3")
         plot_patch(axs[3], X4, "X4")
         plot_patch(axs[4], Y, "Y")   
-    else: 
-        fig, axs = plt.subplots(1,6,figsize=(15, 3))  
-        plot_patch(axs[0], X1, "X1")  
+        axs[5].axis('off')
         if text_description is not None:
-            axs[0].text(-0, 280,   textstr_sampled,  horizontalalignment='left',    verticalalignment='top',  family='monospace', color="blue") 
+            axs[5].text(1400, 0,    textstr_sampled,   horizontalalignment='left',    verticalalignment='top',  family='monospace', color="blue") 
+    else: 
+        fig, axs = plt.subplots(1,7,figsize=(12, 2.75))  
+        plot_patch(axs[0], X1, "X1")   
         plot_patch(axs[1], X2, "X2")
         plot_patch(axs[2], X3, "X3")
         plot_patch(axs[3], X4, "X4")
         plot_patch(axs[4], Y,  "Y GT")    
-        plot_patch(axs[5], Y_predict, "Y Predict")             
+        plot_patch(axs[5], Y_predict, "Y Predict")   
+        if text_description is not None:
+            axs[6].text(0,  1.0,   textstr_sampled,  horizontalalignment='left',    verticalalignment='top',  family='monospace', color="blue")           
+            axs[6].axis('off')
 
+        fig.tight_layout()
     if savepath is None:
         plt.show()
     else:
-        plt.savefig(savepath)    
+        plt.savefig(savepath) 
+
+    plt.close("all")   
 
 
 if __name__ == "__main__":
 
-    INPUTS_PATH = "./SkyNet_Data/xTest_skip_pred5.h5"
-    TARGET_PATH = "./SkyNet_Data/yTest_skip_pred5.h5"
-    dataset = DatasetFromFolder(INPUTS_PATH, TARGET_PATH)
+    INPUTS_PATH = "./CUEE_preprocessing/h5files_Frame-4-Mins/*.h5" 
+    dataset = DatasetFromFolder(INPUTS_PATH)
     dataloader = DataLoader(dataset)
     for data_ in dataloader:
-        inputs, target = data_  
+        inputs, target = data_   
         long_inputs = torch.cat([inputs,target],dim=1)
 
-        for i in range(5): 
-            x = long_inputs[:,3*i:(3*i+12),:,:] 
-            y = target[:,3*i:(3*i+3),:,:]   
-            plotXY(x.permute(2,3,1,0).squeeze(-1), y.permute(2,3,1,0).squeeze(-1))  
-            
+        x = inputs
+        y = target  
+        plotXY(x.permute(2,3,1,0).squeeze(-1), y.permute(2,3,1,0).squeeze(-1))  
 
 
-
-
-  

@@ -7,7 +7,7 @@ from torch.autograd import Variable
 from LiteFlowNet import Network, batch_estimate
 from losses import Gradient_Loss, Flow_Loss, Intensity_Loss
 from skynet_Unet_model import SkyNet_UNet
-from dataLoader import DatasetFromFolder, plotXY
+from dataloader_CUEE import DatasetFromFolder, plotXY, PSNR
 from torch.utils.data import DataLoader
 import argparse
 import numpy as np
@@ -47,10 +47,9 @@ args = parser.parse_args()
 #Model Paths
 lite_flow_model_path='./network-sintel.pytorch'
 
-INPUTS_PATH = "./SkyNet_Data/xTest_skip_pred5.h5"
-TARGET_PATH = "./SkyNet_Data/yTest_skip_pred5.h5"
+INPUTS_PATH = "./CUEE_preprocessing/h5files_Frame-4-Mins/*.h5" 
 
-image_path = "./saveplots/prediction_%d.png"
+
 
 # Models
 devCount = torch.cuda.device_count()
@@ -79,7 +78,7 @@ flow_network.cuda().eval()
 
  
 
-testLoader = DataLoader(DatasetFromFolder(INPUTS_PATH, TARGET_PATH), args.BATCH_SIZE, shuffle=False)
+testLoader = DataLoader(DatasetFromFolder(INPUTS_PATH), args.BATCH_SIZE, shuffle=False)
  
 
 # Training Loss
@@ -98,55 +97,35 @@ trainLossCount = 0
 num_images = 0
 pbar = tqdm(testLoader)
 
-savepath = "results/infer_%s"  % (os.path.basename(model_name).split('.pt')[0])
-
+os.makedirs("results_cuee",exist_ok=True) 
+image_path = "results_cuee/prediction_%d.png"
   
 for input_index, (inputs, target) in enumerate(pbar):
 
 
     # Training
     inputs = inputs.float().to(device) # The input data
-    target = target.float().to(device) 
+    target = target.float().to(device)  
+         
+    x = inputs
+    y = target 
+
+    with torch.no_grad(): 
+        G_output = model(x)
+    
  
-    
-    num_images += inputs.size(0) 
-    long_inputs = torch.cat([inputs, target],dim=1)
-    
  
-    for i in range(5):
+    x = x.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+    y = y.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+    G_output = G_output.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+     
+    psnr = PSNR(G_output*255,y*255)
+    description = {'id': input_index, "psnr":psnr}
+    savepath = image_path % input_index
         
-        
-        x = long_inputs[:,3*i:(3*i+12),:,:] 
-        y = target[:,3*i:(3*i+3),:,:]  
-        # Trains model 
-
-        with torch.no_grad(): 
-            G_output = model(x)
-    
-        # For Optical Flow 
-        input_last = x[:, 9:,:,:].clone().cuda() #I_t
-
-        pred_flow_esti_tensor = torch.cat([input_last, G_output],1) #(Predicted)
-        gt_flow_esti_tensor = torch.cat([input_last, y],1) #(Ground Truth)
-        
-        flow_gt    = batch_estimate(gt_flow_esti_tensor, flow_network)
-        flow_pred  = batch_estimate(pred_flow_esti_tensor, flow_network)
-
-
-        g_op_loss  = op_loss(flow_pred, flow_gt)  
-        g_int_loss = int_loss(G_output, y) 
-        g_gd_loss  = gd_loss(G_output, y)
-
-        x = x.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
-        y = y.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
-        G_output = G_output.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
-
-        filepath = os.path.join(savepath, "sample_%d.png" % input_index)
-        description = {'id': input_index, 'Optical fl loss': g_op_loss.item(), 'Intensity loss': g_int_loss.item(), 'Gradient loss': g_gd_loss.item()}
-        savepath = image_path % i 
-        
-        plotXY(x, y, G_output, savepath=savepath, text_description=description)   
-        pbar.set_postfix(description)
+    plotXY(x, y, G_output, savepath=savepath, text_description=description)   
+ 
+    pbar.set_postfix(description)
 
  
  
