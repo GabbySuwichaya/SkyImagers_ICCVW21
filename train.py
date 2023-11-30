@@ -13,6 +13,7 @@ import argparse
 import numpy as np
 import os
 import cupy
+import pdb
 
 parser = argparse.ArgumentParser()
 
@@ -51,7 +52,8 @@ lite_flow_model_path='./network-sintel.pytorch'
 
 INPUTS_PATH = "./SkyNet_Data/xTrain_skip.h5"
 TARGET_PATH = "./SkyNet_Data/yTrain_skip.h5"
-
+ 
+trainLoader = DataLoader(DatasetFromFolder(INPUTS_PATH, TARGET_PATH), args.BATCH_SIZE, shuffle=True) 
 
 # Models
 devCount = torch.cuda.device_count()
@@ -84,9 +86,6 @@ generator = torch.nn.DataParallel(generator, device_ids=[devCount - 1, 0])
 flow_network = Network()
 flow_network.load_state_dict(torch.load(lite_flow_model_path))
 flow_network.cuda().eval()
-
-
-trainLoader = DataLoader(DatasetFromFolder(INPUTS_PATH, TARGET_PATH), args.BATCH_SIZE, shuffle=True)
 
 # Trains model (on training data) and returns the training loss
 def run_train(model, x, y, gd_loss, op_loss, int_loss, optimizer): # Add skip as a parameter here

@@ -47,7 +47,7 @@ args = parser.parse_args()
 #Model Paths
 lite_flow_model_path='./network-sintel.pytorch'
 
-INPUTS_PATH = "./CUEE_preprocessing/h5files_Frame-4-Mins/*.h5" 
+INPUTS_PATH = "CUEE_preprocessing/Testing-Tr0p60-Val0p20-Test0p20/h5files_Frame-4-Mins_IMS-1920x1080/*.h5" 
 
 
 
@@ -63,11 +63,9 @@ device = torch.device(dev if torch.cuda.is_available() else "cpu")
 
 # SkyNet UNet
 model = SkyNet_UNet(args.input_channels, args.output_channels) 
-
-# model_name = 'weights/Iteration0.pt'
-# model = torch.load(model_name)
-
-model_name = 'weights/weight_%d.pt' % 39
+ 
+ 
+model_name = 'training_cuee_480_weights/weight_%03d.pt' % 19
 model.load_state_dict(torch.load(model_name)['state_dict'])
 model = model.cuda().eval()
 
@@ -97,9 +95,10 @@ trainLossCount = 0
 num_images = 0
 pbar = tqdm(testLoader)
 
-os.makedirs("results_cuee",exist_ok=True) 
-image_path = "results_cuee/prediction_%d.png"
-  
+os.makedirs( "results_cuee_trained_480", exist_ok=True) 
+image_path = "results_cuee_trained_480/prediction_%d.png"
+
+psnr_all = []  
 for input_index, (inputs, target) in enumerate(pbar):
 
 
@@ -111,21 +110,20 @@ for input_index, (inputs, target) in enumerate(pbar):
     y = target 
 
     with torch.no_grad(): 
-        G_output = model(x)
+        G_output = model(x) 
+ 
     
+    psnr = PSNR(G_output.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()*255,y.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()*255)
  
- 
-    x = x.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
-    y = y.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
-    G_output = G_output.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
-     
-    psnr = PSNR(G_output*255,y*255)
+    psnr_all.append(psnr)
+
     description = {'id': input_index, "psnr":psnr}
-    savepath = image_path % input_index
-        
-    plotXY(x, y, G_output, savepath=savepath, text_description=description)   
- 
-    pbar.set_postfix(description)
+    savepath = image_path % input_index 
+         
+    pbar.set_postfix(description) 
+
+
+print("Average-PSNR %f" % (sum(psnr_all)/len(psnr_all)))
 
  
  

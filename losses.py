@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-# Check GPUs
+# # Check GPUs
+# devCount = 0
 devCount = torch.cuda.device_count()
 dev = torch.cuda.current_device()
-
 if devCount > 1:
     dev = "cuda:" + str(devCount - 1)
 

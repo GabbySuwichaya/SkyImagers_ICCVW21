@@ -1,7 +1,7 @@
 import h5py
 import torch.utils.data as data
 from torch.utils.data import Dataset, DataLoader
-
+import os 
 import numpy as np
 import torch
 from warp import *
@@ -9,8 +9,17 @@ import pdb
 import glob
 from math import log10, sqrt 
 import matplotlib.pyplot as plt
+import random
+
 ## Hyperparameter
 WarpUpSampFactor = 0.707
+
+def PSNR_torch(original, compressed):  
+    B, C, H, W = original.shape
+    mse = torch.mean((original.view(B, C, -1) - compressed.view(B, C, -1)) ** 2, dim=2)   
+    max_pixel = 255 
+    psnr = 20 * torch.log10(max_pixel / torch.sqrt(mse))  
+    return psnr
 
 def PSNR(original, compressed): 
     mse = np.mean((original - compressed) ** 2) 
@@ -23,17 +32,36 @@ def PSNR(original, compressed):
 
 
 class DatasetFromFolder(data.Dataset):
-    def __init__(self, input_folder):
+    def __init__(self, input_folder, Image_list_file = None, subsample=None):
         super(DatasetFromFolder, self).__init__()
 
-        self.input_files = glob.glob(input_folder)
- 
-        
-        self.n_images = len(self.input_files)
+        if Image_list_file == None:
+            input_files = glob.glob(input_folder + "/*.h5")
+        else:
+            my_file =  open(Image_list_file, "r")  
+            data = my_file.read()  
+            data_into_list = data.split("\n")  
+            my_file.close()   
+            input_files = [os.path.join(input_folder, "%s" % file_name )   for file_name in data_into_list if len(file_name) > 0] 
+
+        input_files.sort() 
+
+        total_length  = len(input_files)
+
+        if subsample is not None:
+            num_subsample          = int(subsample*total_length)   
+            self.input_files       = random.choices(input_files, k = num_subsample) 
+        else:
+            self.input_files = input_files
+
+        self.n_images = len(self.input_files) 
 
     def __getitem__(self, index):
 
-        h5file = h5py.File(self.input_files[index], 'r') 
+        try:
+            h5file = h5py.File(self.input_files[index], 'r') 
+        except:
+            pdb.set_trace()
   
         inputs = h5file["X"] 
         target = h5file["Y"]  
@@ -109,6 +137,10 @@ def plotXY_15x18(input_X,input_Y):
 
 def plotXY(input_X,input_Y, Y_predict=None, savepath=None, text_description=None):
     
+    input_X = input_X.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+    input_Y = input_Y.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+    Y_predict = Y_predict.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+
  
     Y  = input_Y[:,:,:3] 
 
@@ -169,7 +201,7 @@ if __name__ == "__main__":
     dataset = DatasetFromFolder(INPUTS_PATH)
     dataloader = DataLoader(dataset)
     for data_ in dataloader:
-        inputs, target = data_   
+        inputs, target = data_    
         long_inputs = torch.cat([inputs,target],dim=1)
 
         x = inputs
