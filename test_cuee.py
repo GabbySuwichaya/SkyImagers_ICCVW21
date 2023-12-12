@@ -13,6 +13,7 @@ import argparse
 import numpy as np
 import os
 import pdb 
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 
@@ -47,8 +48,8 @@ args = parser.parse_args()
 #Model Paths
 lite_flow_model_path='./network-sintel.pytorch'
 
-INPUTS_PATH = "CUEE_preprocessing/Testing-Tr0p60-Val0p20-Test0p20/h5files_Frame-4-Mins_IMS-1920x1080/*.h5" 
-
+#INPUTS_PATH = "CUEE_preprocessing/Testing-Tr0p80-Val0p00-Test0p20/h5files_Frame-4-Mins_IMS-1920x1080"
+INPUTS_PATH = "CUEE_preprocessing/Saranphat/h5files_Frame-4-Mins_IMS-1920x1080-Saranphat"
 
 
 # Models
@@ -63,9 +64,22 @@ device = torch.device(dev if torch.cuda.is_available() else "cpu")
 
 # SkyNet UNet
 model = SkyNet_UNet(args.input_channels, args.output_channels) 
- 
- 
-model_name = 'training_cuee_480_weights/weight_%03d.pt' % 19
+
+new_weight = True 
+
+if new_weight == True: 
+    ep = 39
+    model_name = 'train_weights_Tr0p80-Val0p00-Test0p20_480_Shuffle/weight_%03d.pt' % ep
+    prediction_folder = "saveimage_CUEE_weights_%03d" %  ep
+else:
+    ep = 20
+    model_name = 'weights/backups/weight_ %d.pt' % ep
+    prediction_folder = "saveimage_TSI_weights_%02d" % ep
+
+os.makedirs( prediction_folder, exist_ok=True) 
+
+
+#model_name = 'weights/weight_39.pt' 
 model.load_state_dict(torch.load(model_name)['state_dict'])
 model = model.cuda().eval()
 
@@ -74,9 +88,8 @@ flow_network = Network()
 flow_network.load_state_dict(torch.load(lite_flow_model_path))
 flow_network.cuda().eval() 
 
- 
-
-testLoader = DataLoader(DatasetFromFolder(INPUTS_PATH), args.BATCH_SIZE, shuffle=False)
+  
+testLoader = DataLoader(DatasetFromFolder(INPUTS_PATH ), args.BATCH_SIZE, shuffle=False)
  
 
 # Training Loss
@@ -98,8 +111,9 @@ pbar = tqdm(testLoader)
 os.makedirs( "results_cuee_trained_480", exist_ok=True) 
 image_path = "results_cuee_trained_480/prediction_%d.png"
 
+
 psnr_all = []  
-for input_index, (inputs, target) in enumerate(pbar):
+for input_index, (inputs, target, image_name) in enumerate(pbar):
 
 
     # Training
@@ -107,14 +121,28 @@ for input_index, (inputs, target) in enumerate(pbar):
     target = target.float().to(device)  
          
     x = inputs
-    y = target 
+    y_groundtruth = target 
 
     with torch.no_grad(): 
-        G_output = model(x) 
+        y_predict = model(x) 
  
+    Image_gt   = y_groundtruth.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy() 
+    Image_pred = y_predict.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+
+    Image_gt   = (Image_gt - Image_gt.min())/(Image_gt.max() - Image_gt.min())
+    Image_pred = (Image_pred - Image_pred.min())/(Image_pred.max() - Image_pred.min())
+
+    plt.imsave(os.path.join(prediction_folder, image_name[0] + "-gt.png"), Image_gt)
     
-    psnr = PSNR(G_output.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()*255,y.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()*255)
- 
+    plt.imsave(os.path.join(prediction_folder, image_name[0] + "-pred.png"), Image_pred)
+    
+    psnr = PSNR(Image_gt*255, Image_pred*255)
+    
+
+    txtf = open(os.path.join(prediction_folder, image_name[0] + '-PSNR.txt'),'w+')
+    txtf.write("%s:%f" % (image_name[0], psnr)  ) 
+    txtf.close()
+
     psnr_all.append(psnr)
 
     description = {'id': input_index, "psnr":psnr}

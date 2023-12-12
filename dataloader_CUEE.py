@@ -18,7 +18,7 @@ def PSNR_torch(original, compressed):
     B, C, H, W = original.shape
     mse = torch.mean((original.view(B, C, -1) - compressed.view(B, C, -1)) ** 2, dim=2)   
     max_pixel = 255 
-    psnr = 20 * torch.log10(max_pixel / torch.sqrt(mse))  
+    psnr      = 20 * torch.log10(max_pixel / torch.sqrt(mse))  
     return psnr
 
 def PSNR(original, compressed): 
@@ -82,10 +82,11 @@ class DatasetFromFolder(data.Dataset):
         
         #target = np.moveaxis(target, 2, 0)
         target = torch.from_numpy(target)
-         
 
+        # อันนี้เพิ่มขึ้นมาเพื่อ print filename ตอน train อย่าลืม comment ออก 
+        image_name = os.path.basename(self.input_files[index]).split(".h5")[0]
         # pdb.set_trace() << Comment อันนี้ ออกด้วยนะคะ 
-        return inputs, target
+        return inputs, target  , image_name
 
     def __len__(self):
         return self.n_images

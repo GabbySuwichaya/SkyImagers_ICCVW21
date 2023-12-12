@@ -23,7 +23,7 @@ for pickle_ in pickle_files:
 df = pd.DataFrame(total_loss_list) 
  
 
-lam_int = 5.00
+lam_int = 0.5
 lam_gd  = 0.00111
 lam_op  = 0.010
 
@@ -32,18 +32,28 @@ op_loss     = lam_op*df["op_loss"].values
 int_loss    = lam_int*df["int_loss"].values
 gd_loss     = lam_op*df["gd_loss"].values
 
-plt.figure()
-plt.plot(total_loss, label="Total loss [training]", color='black', linestyle = "-", linewidth=2)
-plt.plot(op_loss, label="Optical loss [training]",  color='orange', linestyle = "-.",linewidth=2, alpha=0.5)
-plt.plot(int_loss, label="Intensity loss [training]",    color='lime', linestyle = "--",linewidth=2, alpha=0.5)
-plt.plot(gd_loss, label="Gradient loss [training]",      color='blue', linestyle = ":",linewidth=2, alpha=0.5)
-plt.xlabel('Iterations')
-plt.ylabel('Loss function value') 
-#plt.xlim([0,500])
-plt.legend()
-plt.grid()                                     # draw grid for major ticks
-plt.grid(which='minor', alpha=0.3)   
-plt.show()
+fig, ax = plt.subplots(4, 1,  sharex=True,  figsize=(7, 5))
+ax[0].plot(total_loss, label="Total loss", color='black', linestyle = "-", linewidth=2)
+ax[0].set_ylabel('Total Loss')
+ax[0].grid()      
+
+ax[1].plot(int_loss, label="Intensity loss [training]",    color='green', linestyle = "--",linewidth=2, alpha=0.5)
+ax[1].set_ylabel('Intensity Loss')
+ax[1].grid()      
+
+
+ax[2].plot(op_loss, label="Optical loss [training]",  color='orange', linestyle = "-.",linewidth=2, alpha=0.5)
+ax[2].set_ylabel('Optical Loss')
+ax[2].grid()      
+
+
+ax[3].plot(gd_loss, label="Gradient loss [training]",      color='blue', linestyle = ":",linewidth=2, alpha=0.5)
+ax[3].set_ylabel('Gradient Loss')
+ax[3].set_xlabel('Iterations')
+ax[3].grid()      
+ax[3].set_xlim([0,500])
+# draw grid for major ticks  
+plt.savefig("Loss")
 
 pdb.set_trace()
 

@@ -12,7 +12,8 @@ from torch.utils.data import DataLoader
 import argparse
 from LiteFlowNet import Network, batch_estimate
 from losses import Gradient_Loss, Flow_Loss, Intensity_Loss
-
+from math import log10, sqrt 
+import numpy as np
 
 from tqdm import tqdm
 # Models
@@ -95,10 +96,10 @@ epoch_PSNR_valid = []
 epoch_loss_train = []
 epoch_PSNR_train = []
 
-testLoader = DataLoader(DatasetFromFolder(INPUTS_PATH, Image_list_file=Image_list_file, subsample=0.2),  args.BATCH_SIZE, shuffle=True) 
+testLoader = DataLoader(DatasetFromFolder(INPUTS_PATH, Image_list_file=Image_list_file, subsample=0.1),  args.BATCH_SIZE, shuffle=True) 
 
 
-for  ep_ in range(13):
+for  ep_ in range(40):
 
     model_name       = 'train_weights_%s_%d_Shuffle/weight_%03d.pt' %  (Data_Setting, args.image_size, ep_)
 
@@ -107,8 +108,8 @@ for  ep_ in range(13):
     model.load_state_dict(torch_loaded['state_dict'])
     model = model.cuda().eval()  
      
-    epoch_loss_train.append(torch_loaded['train_loss'])
-    epoch_PSNR_train.append(torch_loaded['train_psnr'])
+    epoch_loss_train.append(torch_loaded['train_loss']) 
+    epoch_PSNR_train.append(torch_loaded['train_psnr'] -  20*log10(255))
     
     valid_PSNR = []
     valid_loss = [] 
@@ -133,22 +134,31 @@ for  ep_ in range(13):
         input_last = inputs[:, 9:,:,:].clone().cuda() #I_t 
 
         pred_flow_esti_tensor = torch.cat([input_last, G_output],1) #(Predicted)
-        gt_flow_esti_tensor = torch.cat([input_last, target],1) #(Ground Truth) 
+        gt_flow_esti_tensor   = torch.cat([input_last, target],1) #(Ground Truth) 
 
         flow_gt   = batch_estimate(gt_flow_esti_tensor, flow_network)
         flow_pred = batch_estimate(pred_flow_esti_tensor, flow_network)
         
-        g_op_loss = op_loss(flow_pred, flow_gt)
+        g_op_loss  = op_loss(flow_pred, flow_gt)
         g_int_loss = int_loss(G_output, target)
-        g_gd_loss = gd_loss(G_output, target)
+        g_gd_loss  = gd_loss(G_output, target)
     
         g_loss = args.lam_gd*g_gd_loss + args.lam_op*g_op_loss + args.lam_int*g_int_loss
 
-        valid_loss.append(g_loss.item())
-        
-        PSNR_BxC_temp = PSNR(G_output.cpu().numpy(), target.cpu().numpy())   
+        valid_loss.append(g_loss.item()) 
+         
+        #pdb.set_trace()
+        Image_gt   = G_output.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy() 
+        Image_pred = target.permute(2,3,1,0).squeeze(-1).detach().cpu().numpy()
+
+        Image_gt   = (Image_gt - Image_gt.min())/(Image_gt.max() - Image_gt.min())
+        Image_pred = (Image_pred - Image_pred.min())/(Image_pred.max() - Image_pred.min())
+
+        PSNR_BxC_temp = PSNR(255*Image_gt, 255*Image_pred)   
+        #PSNR_BxC_temp = PSNR(G_output.cpu().numpy(), target.cpu().numpy())   -   20*log10(255)
+        #pdb.set_trace()
         valid_PSNR.append(PSNR_BxC_temp)
-        pbar.set_postfix({'Valid loss': g_loss.item(), "PSNR" :PSNR_BxC_temp})
+        pbar.set_postfix({'EP': ep_, 'Valid loss': g_loss.item(), "PSNR" : sum(valid_PSNR)/len(valid_PSNR)})
  
 
     epoch_loss_valid.append(sum(valid_loss)/len(valid_loss) )
@@ -157,18 +167,15 @@ for  ep_ in range(13):
 ########################################################################## 
  
 plt.figure()
-plt.plot(epoch_PSNR_train, label="PSNR [training]",   color='blue', linestyle = "-", linewidth=2)
-plt.plot(epoch_PSNR_valid, label="PSNR [validation]", color='red',  linestyle = "--", linewidth=2) 
+plt.plot(np.arange(0, 40, step=1), epoch_PSNR_train, label="PSNR [training]",   color='blue', linestyle = "-", linewidth=2)
+plt.plot(np.arange(0, 40, step=1), epoch_PSNR_valid, label="PSNR [validation]", color='red',  linestyle = "--", linewidth=2)  
 plt.xlabel('Iterations')
 plt.ylabel('Loss function value') 
-#plt.xlim([0,500])
+plt.xlim([0,40])
 plt.legend()
 plt.grid()                                     # draw grid for major ticks
 plt.grid(which='minor', alpha=0.3)   
-plt.savefig("Valid_vs_train.png")
-plt.show()
-
-pdb.set_trace()
+plt.savefig("Valid_vs_train.png")  
 
 
 
